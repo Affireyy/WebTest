@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login - Library</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            color: #FFFFFF;
+        }
+        h1 {
+            color: #FFFFFF;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #FFFFFF;
+            margin-bottom: 30px;
+        }
+        .login-box {
+            background-color: #1a1a1a;
+            border: 2px solid #FFFFFF;
+            padding: 30px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #FFFFFF;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            background-color: #000;
+            color: #FFF;
+            border: 1px solid #FFF;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #FFFFFF;
+            box-shadow: 0 0 5px #FFFFFF;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #333;
+            color: #FFFFFF;
+            border: 2px solid #FFFFFF;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .error-message {
+            color: #F66;
+            text-align: center;
+            margin-top: 15px;
+            min-height: 20px;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: #888;
+            text-decoration: none;
+        }
+        .back-link a:hover {
+            color: #FFF;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Login</h1>
+    
+    <div class="login-box">
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Login</button>
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+        <div class="back-link">
+            <a href="/library">← Back to Library</a>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+            
+            errorMessage.textContent = '';
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.token) {
+                    // Store the session token
+                    sessionStorage.setItem('admin_token', data.token);
+                    // Redirect to admin panel
+                    window.location.href = '/library/admin';
+                } else {
+                    errorMessage.textContent = 'Invalid username or password';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorMessage.textContent = 'Login failed. Please try again.';
+            }
+        }
+        
+        // Check if already logged in
+        window.onload = function() {
+            const token = sessionStorage.getItem('admin_token');
+            if (token) {
+                // Verify token is still valid
+                fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.status === 'success') {
+                          window.location.href = '/library/admin';
+                      }
+                  });
+            }
+        };
+    </script>
+</body>
+</html>

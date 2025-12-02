@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Testing In Progress</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+        h1 {
+            color: #FFFFFF;
+            font-size: 3em;
+            text-shadow: 0 0 10px #FFFFFF;
+            margin-bottom: 40px;
+        }
+        .sponsored-section {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+        .sponsored-title {
+            color: #888;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .sponsored-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sponsored-link {
+            background-color: #1a1a1a;
+            border: 1px solid #FFFFFF;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .sponsored-link a {
+            color: #FFFFFF;
+            text-decoration: none;
+            font-size: 1.2em;
+        }
+        .sponsored-link a:hover {
+            text-shadow: 0 0 5px #FFFFFF;
+        }
+        button {
+            position: fixed;
+            bottom: 20px;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #FFFFFF;
+            border: 2px solid #FFFFFF;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .log-ip-btn {
+            left: 20px;
+        }
+        .library-btn {
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Testing In Progress</h1>
+    
+    <div class="sponsored-section" id="sponsoredSection" style="display:none;">
+        <div class="sponsored-title">Sponsored</div>
+        <div class="sponsored-links" id="sponsoredLinks"></div>
+    </div>
+    
+    <button class="log-ip-btn" onclick="sendIP()">Log IP</button>
+    <button class="library-btn" onclick="window.location.href='/library'">Library</button>
+    
+    <script>
+        async function sendIP() {
+            try {
+                const response = await fetch('/log-ip', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                console.log('IP logged:', data.ip);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadSponsored() {
+            try {
+                const response = await fetch('/api/pinned');
+                const data = await response.json();
+                
+                if (data.links.length > 0) {
+                    document.getElementById('sponsoredSection').style.display = 'block';
+                    document.getElementById('sponsoredLinks').innerHTML = data.links.map(link => `
+                        <div class="sponsored-link">
+                            <a href="${link.url}" target="_blank">${link.name}</a>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading sponsored links:', error);
+            }
+        }
+
+        loadSponsored();
+    </script>
+</body>
+</html>

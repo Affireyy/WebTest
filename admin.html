@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .dashboard {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: #34495e;
+            border-bottom: 1px solid #1a252f;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background-color: #34495e;
+        }
+
+        .nav-item.active {
+            background-color: #3498db;
+            border-left: 4px solid #2980b9;
+        }
+
+        .nav-icon {
+            font-size: 1.2em;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #1a252f;
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            background-color: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .topbar h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Library Tab Styles */
+        .add-link-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .add-link-card h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .add-btn {
+            padding: 12px 30px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .add-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .links-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .links-card h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .link-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            transition: box-shadow 0.2s;
+        }
+
+        .link-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .link-info {
+            flex: 1;
+        }
+
+        .link-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .link-url {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .pinned-badge {
+            display: inline-block;
+            background-color: #27ae60;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .link-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: opacity 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+
+        .pin-btn {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .pin-btn.pinned {
+            background-color: #27ae60;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* Logs Tab Styles */
+        .logs-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logs-header h3 {
+            color: #2c3e50;
+        }
+
+        .clear-logs-btn {
+            padding: 8px 16px;
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .clear-logs-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        .logs-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            height: 500px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-timestamp {
+            color: #858585;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 100px 20px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingMessage" class="loading-message">
+        <div>Verifying access...</div>
+    </div>
+
+    <div id="dashboard" class="dashboard" style="display:none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab('library')">
+                    <span class="nav-icon">📚</span>
+                    <span>Library</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('logs')">
+                    <span class="nav-icon">📋</span>
+                    <span>Logs</span>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="topbar">
+                <h1 id="pageTitle">Library Management</h1>
+            </div>
+            <div class="content-area">
+                <!-- Library Tab -->
+                <div id="library-tab" class="tab-content active">
+                    <div class="add-link-card">
+                        <h3>Add New Link</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="linkName">Name</label>
+                                <input type="text" id="linkName" placeholder="Enter link name">
+                            </div>
+                            <div class="form-group">
+                                <label for="linkUrl">URL</label>
+                                <input type="text" id="linkUrl" placeholder="Enter URL">
+                            </div>
+                        </div>
+                        <button class="add-btn" onclick="addLink()">Add Link</button>
+                    </div>
+
+                    <div class="links-card">
+                        <h3>All Links</h3>
+                        <div id="linksList"></div>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logs-tab" class="tab-content">
+                    <div class="logs-card">
+                        <div class="logs-header">
+                            <h3>Server Logs</h3>
+                            <button class="clear-logs-btn" onclick="clearLogs()">Clear Logs</button>
+                        </div>
+                        <div class="logs-container" id="logsContainer">
+                            <div class="log-entry">Connecting to server logs...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let logsInterval = null;
+
+        // Check authentication on page load
+        window.onload = async function() {
+            authToken = sessionStorage.getItem('admin_token');
+            
+            if (!authToken) {
+                window.location.href = '/library/admin/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'flex';
+                    loadLinks();
+                    startLogsPolling();
+                } else {
+                    sessionStorage.removeItem('admin_token');
+                    window.location.href = '/library/admin/login';
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                sessionStorage.removeItem('admin_token');
+                window.location.href = '/library/admin/login';
+            }
+        };
+
+        function switchTab(tabName) {
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Update page title
+            const titles = {
+                'library': 'Library Management',
+                'logs': 'Server Logs'
+            };
+            document.getElementById('pageTitle').textContent = titles[tabName];
+
+            // Start/stop logs polling
+            if (tabName === 'logs') {
+                startLogsPolling();
+            } else {
+                stopLogsPolling();
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('admin_token');
+            stopLogsPolling();
+            window.location.href = '/library/admin/login';
+        }
+
+        // Library Functions
+        async function loadLinks() {
+            const res = await fetch('/api/library');
+            const data = await res.json();
+            const list = document.getElementById('linksList');
+
+            if (data.links.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:20px;">No links yet. Add one above!</div>';
+                return;
+            }
+
+            list.innerHTML = data.links.map((link, index) => `
+                <div class="link-item">
+                    <div class="link-info">
+                        <div class="link-name">
+                            ${link.name}
+                            ${link.pinned ? '<span class="pinned-badge">PINNED</span>' : ''}
+                        </div>
+                        <div class="link-url">${link.url}</div>
+                    </div>
+                    <div class="link-actions">
+                        <button class="action-btn pin-btn ${link.pinned ? 'pinned' : ''}" onclick="togglePin(${index})">
+                            ${link.pinned ? 'Unpin' : 'Pin'}
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deleteLink(${index})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addLink() {
+            const name = document.getElementById("linkName").value.trim();
+            const url = document.getElementById("linkUrl").value.trim();
+
+            if (!name || !url) {
+                alert("Please enter both name and URL");
+                return;
+            }
+
+            await fetch('/api/library', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, url })
+            });
+
+            document.getElementById("linkName").value = '';
+            document.getElementById("linkUrl").value = '';
+            loadLinks();
+        }
+
+        async function togglePin(index) {
+            await fetch(`/api/library/${index}/pin`, { method: 'POST' });
+            loadLinks();
+        }
+
+        async function deleteLink(index) {
+            if (confirm('Are you sure you want to delete this link?')) {
+                await fetch(`/api/library/${index}`, { method: 'DELETE' });
+                loadLinks();
+            }
+        }
+
+        // Logs Functions
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/admin/logs');
+                const data = await response.json();
+                
+                const container = document.getElementById('logsContainer');
+                if (data.logs && data.logs.length > 0) {
+                    container.innerHTML = data.logs.map(log => 
+                        `<div class="log-entry">${escapeHtml(log)}</div>`
+                    ).join('');
+                    // Auto-scroll to bottom
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            }
+        }
+
+        function startLogsPolling() {
+            loadLogs();
+            if (!logsInterval) {
+                logsInterval = setInterval(loadLogs, 2000); // Poll every 2 seconds
+            }
+        }
+
+        function stopLogsPolling() {
+            if (logsInterval) {
+                clearInterval(logsInterval);
+                logsInterval = null;
+            }
+        }
+
+        async function clearLogs() {
+            if (confirm('Are you sure you want to clear the logs?')) {
+                try {
+                    await fetch('/api/admin/logs', { method: 'DELETE' });
+                    document.getElementById('logsContainer').innerHTML = '<div class="log-entry">Logs cleared.</div>';
+                } catch (error) {
+                    console.error('Error clearing logs:', error);
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Clean up on page unload
+        window.onbeforeunload = function() {
+            stopLogsPolling();
+        };
+    </script>
+
+</body>
+</html>

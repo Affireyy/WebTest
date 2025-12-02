@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Library</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            color: #FFFFFF;
+        }
+        h1 {
+            color: #FFFFFF;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #FFFFFF;
+            margin-bottom: 30px;
+        }
+        .links-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 80px;
+        }
+        .link-item {
+            background-color: #1a1a1a;
+            border: 1px solid #FFFFFF;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .link-item a {
+            color: #FFFFFF;
+            text-decoration: none;
+            font-size: 1.2em;
+        }
+        .link-item a:hover {
+            text-shadow: 0 0 5px #FFFFFF;
+        }
+        .empty-message {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Back Button (Bottom-left) */
+        #backButton {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #FFFFFF;
+            border: 2px solid #FFFFFF;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        #backButton:hover {
+            background-color: #555;
+        }
+
+        /* Admin Button (Bottom-right) */
+        #adminButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #FFFFFF;
+            border: 2px solid #FFFFFF;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        #adminButton:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Library</h1>
+
+    <div class="links-container" id="linksContainer">
+        <div class="empty-message">No links yet. Add some in the admin panel.</div>
+    </div>
+
+    <!-- NEW Back button -->
+    <button id="backButton" onclick="window.location.href='/'">Back</button>
+
+    <!-- Admin button moved to bottom-right -->
+    <button id="adminButton" onclick="window.location.href='/library/admin'">Admin</button>
+    
+    <script>
+        async function loadLinks() {
+            try {
+                const response = await fetch('/api/library');
+                const data = await response.json();
+                const container = document.getElementById('linksContainer');
+                
+                if (data.links.length === 0) {
+                    container.innerHTML = '<div class="empty-message">No links yet.</div>';
+                } else {
+                    container.innerHTML = data.links.map(link => `
+                        <div class="link-item">
+                            <a href="${link.url}" target="_blank">${link.name}</a>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading links:', error);
+            }
+        }
+        
+        loadLinks();
+    </script>
+</body>
+</html>
