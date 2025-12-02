@@ -63,10 +63,6 @@
             border-left: 4px solid #2980b9;
         }
 
-        .nav-icon {
-            font-size: 1.2em;
-        }
-
         .sidebar-footer {
             padding: 20px;
             border-top: 1px solid #1a252f;
@@ -323,6 +319,80 @@
             color: #858585;
         }
 
+        /* Console Tab Styles */
+        .console-card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .console-header h3 {
+            color: #2c3e50;
+        }
+
+        .console-output {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 13px;
+            height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .console-output-entry {
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .console-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .console-input {
+            flex: 1;
+            padding: 12px;
+            background-color: #0c0c0c;
+            color: #cccccc;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 14px;
+        }
+
+        .console-input:focus {
+            outline: none;
+            border-color: #2980b9;
+        }
+
+        .execute-btn {
+            padding: 12px 30px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .execute-btn:hover {
+            background-color: #229954;
+        }
+
         .loading-message {
             text-align: center;
             padding: 100px 20px;
@@ -345,12 +415,13 @@
             </div>
             <div class="sidebar-nav">
                 <div class="nav-item active" onclick="switchTab('library')">
-                    <span class="nav-icon">📚</span>
                     <span>Library</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('logs')">
-                    <span class="nav-icon">📋</span>
                     <span>Logs</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('console')">
+                    <span>Console</span>
                 </div>
             </div>
             <div class="sidebar-footer">
@@ -399,6 +470,23 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Console Tab -->
+                <div id="console-tab" class="tab-content">
+                    <div class="console-card">
+                        <div class="console-header">
+                            <h3>Terminal Console (For HostPC)</h3>
+                            <button class="clear-logs-btn" onclick="clearConsole()">Clear Console</button>
+                        </div>
+                        <div class="console-output" id="consoleOutput">
+                            <div class="console-output-entry">Console ready. Enter commands below.</div>
+                        </div>
+                        <div class="console-input-area">
+                            <input type="text" class="console-input" id="consoleInput" placeholder="Enter command..." onkeypress="handleConsoleKeyPress(event)">
+                            <button class="execute-btn" onclick="executeCommand()">Execute</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -406,6 +494,7 @@
     <script>
         let authToken = null;
         let logsInterval = null;
+        let consoleInterval = null;
 
         // Check authentication on page load
         window.onload = async function() {
@@ -459,21 +548,27 @@
             // Update page title
             const titles = {
                 'library': 'Library Management',
-                'logs': 'Server Logs'
+                'logs': 'Server Logs',
+                'console': 'Terminal Console'
             };
             document.getElementById('pageTitle').textContent = titles[tabName];
 
-            // Start/stop logs polling
+            // Start/stop polling based on tab
+            stopLogsPolling();
+            stopConsolePolling();
+            
             if (tabName === 'logs') {
                 startLogsPolling();
-            } else {
-                stopLogsPolling();
+            } else if (tabName === 'console') {
+                loadConsoleOutput();
+                startConsolePolling();
             }
         }
 
         function logout() {
             sessionStorage.removeItem('admin_token');
             stopLogsPolling();
+            stopConsolePolling();
             window.location.href = '/library/admin/login';
         }
 
@@ -550,7 +645,6 @@
                     container.innerHTML = data.logs.map(log => 
                         `<div class="log-entry">${escapeHtml(log)}</div>`
                     ).join('');
-                    // Auto-scroll to bottom
                     container.scrollTop = container.scrollHeight;
                 }
             } catch (error) {
@@ -561,7 +655,7 @@
         function startLogsPolling() {
             loadLogs();
             if (!logsInterval) {
-                logsInterval = setInterval(loadLogs, 2000); // Poll every 2 seconds
+                logsInterval = setInterval(loadLogs, 2000);
             }
         }
 
@@ -583,6 +677,198 @@
             }
         }
 
+        // Console Functions
+        async function loadConsoleOutput() {
+            try {
+                const response = await fetch('/api/admin/console');
+                const data = await response.json();
+                
+                const container = document.getElementById('consoleOutput');
+                if (data.output && data.output.length > 0) {
+                    container.innerHTML = data.output.map(output => 
+                        `<div class="console-output-entry">${ansiToHtml(output)}</div>`
+                    ).join('');
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading console output:', error);
+            }
+        }
+
+        function ansiToHtml(text) {
+            // ANSI color code mapping to HTML colors
+            const ansiColors = {
+                // Standard colors (30-37, 40-47)
+                '30': '#000000', '31': '#cd3131', '32': '#0dbc79', '33': '#e5e510',
+                '34': '#2472c8', '35': '#bc3fbc', '36': '#11a8cd', '37': '#e5e5e5',
+                '40': '#000000', '41': '#cd3131', '42': '#0dbc79', '43': '#e5e510',
+                '44': '#2472c8', '45': '#bc3fbc', '46': '#11a8cd', '47': '#e5e5e5',
+                
+                // Bright colors (90-97, 100-107)
+                '90': '#666666', '91': '#f14c4c', '92': '#23d18b', '93': '#f5f543',
+                '94': '#3b8eea', '95': '#d670d6', '96': '#29b8db', '97': '#ffffff',
+                '100': '#666666', '101': '#f14c4c', '102': '#23d18b', '103': '#f5f543',
+                '104': '#3b8eea', '105': '#d670d6', '106': '#29b8db', '107': '#ffffff'
+            };
+
+            let html = escapeHtml(text);
+            let styles = [];
+            
+            // Replace ANSI escape codes with HTML spans
+            html = html.replace(/\x1b\[([0-9;]+)m/g, (match, codes) => {
+                const codeList = codes.split(';');
+                let result = '';
+                
+                for (let code of codeList) {
+                    if (code === '0' || code === '') {
+                        // Reset
+                        if (styles.length > 0) {
+                            result += '</span>';
+                            styles = [];
+                        }
+                    } else if (code === '1') {
+                        // Bold
+                        styles.push('font-weight:bold');
+                    } else if (code === '2') {
+                        // Dim
+                        styles.push('opacity:0.6');
+                    } else if (code === '3') {
+                        // Italic
+                        styles.push('font-style:italic');
+                    } else if (code === '4') {
+                        // Underline
+                        styles.push('text-decoration:underline');
+                    } else if (ansiColors[code]) {
+                        // Foreground color (30-37, 90-97)
+                        if (code.startsWith('3') || code.startsWith('9')) {
+                            styles.push(`color:${ansiColors[code]}`);
+                        }
+                        // Background color (40-47, 100-107)
+                        else if (code.startsWith('4') || code.startsWith('10')) {
+                            styles.push(`background-color:${ansiColors[code]}`);
+                        }
+                    }
+                }
+                
+                if (styles.length > 0) {
+                    return `</span><span style="${styles.join(';')}">`;
+                }
+                return '';
+            });
+            
+            // Handle 256 color mode (ESC[38;5;Nm for foreground, ESC[48;5;Nm for background)
+            html = html.replace(/\x1b\[38;5;(\d+)m/g, (match, color) => {
+                const rgb = ansi256ToRgb(parseInt(color));
+                return `<span style="color:${rgb}">`;
+            });
+            
+            html = html.replace(/\x1b\[48;5;(\d+)m/g, (match, color) => {
+                const rgb = ansi256ToRgb(parseInt(color));
+                return `<span style="background-color:${rgb}">`;
+            });
+            
+            // Handle true color mode (ESC[38;2;R;G;Bm for foreground, ESC[48;2;R;G;Bm for background)
+            html = html.replace(/\x1b\[38;2;(\d+);(\d+);(\d+)m/g, (match, r, g, b) => {
+                return `<span style="color:rgb(${r},${g},${b})">`;
+            });
+            
+            html = html.replace(/\x1b\[48;2;(\d+);(\d+);(\d+)m/g, (match, r, g, b) => {
+                return `<span style="background-color:rgb(${r},${g},${b})">`;
+            });
+            
+            // Clean up any remaining ANSI codes
+            html = html.replace(/\x1b\[[0-9;]*m/g, '');
+            
+            return html;
+        }
+
+        function ansi256ToRgb(code) {
+            // Convert ANSI 256 color code to RGB
+            if (code < 16) {
+                // Standard colors
+                const colors = [
+                    '#000000', '#cd3131', '#0dbc79', '#e5e510',
+                    '#2472c8', '#bc3fbc', '#11a8cd', '#e5e5e5',
+                    '#666666', '#f14c4c', '#23d18b', '#f5f543',
+                    '#3b8eea', '#d670d6', '#29b8db', '#ffffff'
+                ];
+                return colors[code];
+            } else if (code < 232) {
+                // 216 color cube
+                code -= 16;
+                const r = Math.floor(code / 36);
+                const g = Math.floor((code % 36) / 6);
+                const b = code % 6;
+                return `rgb(${r * 51},${g * 51},${b * 51})`;
+            } else {
+                // Grayscale
+                const gray = 8 + (code - 232) * 10;
+                return `rgb(${gray},${gray},${gray})`;
+            }
+        }
+
+        function startConsolePolling() {
+            if (!consoleInterval) {
+                consoleInterval = setInterval(loadConsoleOutput, 2000);
+            }
+        }
+
+        function stopConsolePolling() {
+            if (consoleInterval) {
+                clearInterval(consoleInterval);
+                consoleInterval = null;
+            }
+        }
+
+        async function executeCommand() {
+            const input = document.getElementById('consoleInput');
+            const command = input.value.trim();
+
+            if (!command) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/console', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken
+                    },
+                    body: JSON.stringify({ command })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    input.value = '';
+                    loadConsoleOutput();
+                } else {
+                    alert('Error executing command: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error executing command:', error);
+                alert('Failed to execute command');
+            }
+        }
+
+        function handleConsoleKeyPress(event) {
+            if (event.key === 'Enter') {
+                executeCommand();
+            }
+        }
+
+        async function clearConsole() {
+            if (confirm('Are you sure you want to clear the console?')) {
+                try {
+                    await fetch('/api/admin/console', { method: 'DELETE' });
+                    loadConsoleOutput();
+                } catch (error) {
+                    console.error('Error clearing console:', error);
+                }
+            }
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -592,6 +878,7 @@
         // Clean up on page unload
         window.onbeforeunload = function() {
             stopLogsPolling();
+            stopConsolePolling();
         };
     </script>
 

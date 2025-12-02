@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory
 import json
 import os
 import secrets
+import hashlib
+import subprocess
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -19,6 +21,23 @@ TOKEN_EXPIRY_HOURS = 24
 # Logs storage (in-memory)
 server_logs = []
 MAX_LOGS = 1000
+
+# Console output storage (in-memory)
+console_output = []
+MAX_CONSOLE_OUTPUT = 500
+
+
+# -----------------------------
+# Password hashing functions
+# -----------------------------
+def hash_password(password):
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password, hashed):
+    """Verify a password against its hash"""
+    return hash_password(password) == hashed
 
 
 # -----------------------------
@@ -67,6 +86,15 @@ def add_log(message):
     
     # Also print to console
     print(log_entry)
+
+
+def add_console_output(message):
+    """Add console output"""
+    console_output.append(message)
+    
+    # Keep only the last MAX_CONSOLE_OUTPUT entries
+    if len(console_output) > MAX_CONSOLE_OUTPUT:
+        console_output.pop(0)
 
 
 # -----------------------------
@@ -157,7 +185,7 @@ def admin_login():
 
     admin_data = load_admin()
 
-    if admin_data and username == admin_data.get("username") and password == admin_data.get("password"):
+    if admin_data and username == admin_data.get("username") and verify_password(password, admin_data.get("password")):
         token = create_session_token()
         add_log(f"Admin login successful - Token: {token[:10]}...")
         return jsonify({"status": "success", "token": token})
@@ -214,6 +242,84 @@ def clear_logs():
     global server_logs
     server_logs = []
     add_log("Logs cleared by admin")
+    return jsonify({"status": "success"})
+
+
+# -----------------------------
+# Console API
+# -----------------------------
+@app.route('/api/admin/console', methods=['GET'])
+def get_console_output():
+    """Get console output"""
+    return jsonify({"output": console_output})
+
+
+@app.route('/api/admin/console', methods=['POST'])
+def execute_command():
+    """Execute a command in the terminal"""
+    auth_header = request.headers.get('Authorization')
+    
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"status": "error", "message": "No token provided"}), 401
+    
+    token = auth_header.split('Bearer ')[1]
+    
+    if not is_token_valid(token):
+        return jsonify({"status": "error", "message": "Invalid or expired token"}), 401
+    
+    data = request.json
+    command = data.get('command', '').strip()
+    
+    if not command:
+        return jsonify({"status": "error", "message": "No command provided"}), 400
+    
+    add_log(f"Console command executed: {command}")
+    add_console_output(f"$ {command}")
+    
+    try:
+        # Execute the command with color support
+        # Force color output by setting TERM and other environment variables
+        env = os.environ.copy()
+        env['TERM'] = 'xterm-256color'
+        env['COLORTERM'] = 'truecolor'
+        env['FORCE_COLOR'] = '1'
+        
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env
+        )
+        
+        output = result.stdout if result.stdout else result.stderr
+        if not output:
+            output = "(command completed with no output)"
+        
+        add_console_output(output)
+        
+        return jsonify({
+            "status": "success",
+            "output": output,
+            "return_code": result.returncode
+        })
+    except subprocess.TimeoutExpired:
+        error_msg = "Command timed out (30 second limit)"
+        add_console_output(error_msg)
+        return jsonify({"status": "error", "message": error_msg}), 408
+    except Exception as e:
+        error_msg = f"Error executing command: {str(e)}"
+        add_console_output(error_msg)
+        return jsonify({"status": "error", "message": error_msg}), 500
+
+
+@app.route('/api/admin/console', methods=['DELETE'])
+def clear_console():
+    """Clear console output"""
+    global console_output
+    console_output = []
+    add_console_output("Console cleared.")
     return jsonify({"status": "success"})
 
 
@@ -287,7 +393,7 @@ if __name__ == '__main__':
     add_log("Server starting...")
     add_log("Routes loaded:")
     for rule in app.url_map.iter_rules():
-        add_log(f" • {rule}")
+        add_log(f" - {rule}")
 
     add_log("Server ready on http://0.0.0.0:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
